@@ -23,3 +23,5 @@ The goal was to design a system to visualize Second Genome’s coffee consumptio
 ![](images/hour_line.jpeg)
 ![](images/weekday.jpeg)
 
+
+Note: this project was never fully completed, hence the missing link between _Coffee Calc Lambda_ and the R script to generate these plots _trendseekers_plots.R_
