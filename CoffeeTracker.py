@@ -2,13 +2,10 @@ import boto3
 import datetime
 import hashlib
 import sys
-import json
 
 dynamo_client = boto3.client('dynamodb')
 dynamo_table = 'TrendSeekers'
 
-ssmclient = boto3.client('ssm')
-ssm_param = 'TRENDSEEKERS'
 
 def handler(inputf, context):
 
@@ -18,28 +15,26 @@ def handler(inputf, context):
     # {'serialNumber': 'G030MD040444SC96', 'batteryVoltage': '1603mV', 'clickType': 'SINGLE'}
 
     if inputf['serialNumber'] == 'G030MD040444SC96':
-        button = 'B'
+        button = 'Stumptown'
     elif inputf['serialNumber'] == 'G030MD045236P11V':
-        button = 'A'
+        button = 'BlueBottle'
     else:
         print('ERROR invalid serial number')
         sys.exit(1)
-
-    brand = get_coffee_brand(ssm_param, button)
 
     # build the item
     voteID = generatevoteId(button, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
     item = {
         'voteID': voteID,
-        'choice': brand,
+        'choice': button,
         'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
     # add to the dynamo table
     put_item_in_dynamo(item, dynamo_table)
 
-    print('Sent item to dynamo for choice %s with voteID %s' %(brand, voteID))
+    print('Sent item to dynamo for choice %s with voteID %s' %(button, voteID))
 
     return
 
@@ -64,15 +59,3 @@ def generatevoteId(*args):
     else:
         s = ''.join(['%s' % arg for arg in args]).encode('utf-8')
     return hashlib.md5(s).hexdigest()
-
-
-def get_coffee_brand(param, button):
-
-    response = ssmclient.get_parameters(
-            Names=['/' + param],
-            WithDecryption=True
-    )
-
-    choices = json.loads(response['Parameters'][0]['Value'])
-
-    return choices[button]

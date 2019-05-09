@@ -7,6 +7,7 @@ import boto3
 """
 Handy deployment script to deploy lambdas from command line
 """
+
 lambda_client = boto3.client('lambda')
 
 def main():
@@ -41,7 +42,8 @@ def main():
 
         # deploy
         function_name = lamf.rsplit('.', 1)[0].rsplit('/', 1)[1]
-        response = _lam.update_function_code(function_name, zipf+'.zip')
+        response = update_function_code(function_name, zipf+'.zip')
+        print(response)
 
     os.chdir('..')
     cmd = 'rm -r %s' % target_dir

@@ -1,6 +1,6 @@
 import boto3
 import matplotlib.pyplot as plt
-import pandas as pd
+import datetime
 
 dynamo_client = boto3.client('dynamodb')
 dynamo_table = 'TrendSeekers'
@@ -19,17 +19,11 @@ def handler(inputf, context):
         parsed_stream_event = read_stream_item(msg)
         print(parsed_stream_event)
 
-
-        # get data from table
-        total, data = scan_table()
-        print('Found %i total data points' %total)
-
-        # plot that shit
-        plot_some_stuff(total, data)
-
+        # get data from table - 7 days window - and plot it
+        # todo: delete older data points?
+        data = query_table()
 
     return 0
-
 
 
 def read_stream_item(item):
@@ -43,19 +37,31 @@ def read_stream_item(item):
     return parsed_msg
 
 
-def scan_table():
-    # ToDO: when the table gets big this will be paginated, and need to be read within a loop
-    # see boto3 docs for deets
-    resp = dynamo_client.scan(TableName=dynamo_table)
+def query_table():
+    # ToDO: if the table gets big this will be paginated, and need to be read within a loop
 
-    total = resp['Count']
+    cutoff_date = (datetime.date.today() - datetime.timedelta(8)).strftime("%Y-%m-%d")
+
+    resp= dynamo_client.scan(
+            TableName=dynamo_table,
+            IndexName='voteID',
+            Select='ALL_ATTRIBUTES',
+            ScanFilter='#tmp > :t',
+            ExpressionAttributeValues={":t": {"S": cutoff_date}},
+            ExpressionAttributeNames = {"#tmp": 'timestamp'})
 
     # parse items
     data_points = []
     for item in resp['Items']:
-        data_points += {item['voteID']['S']: {
-            'timestamp': item['timestamp']['S'],
-            'choice': item['choice']['S']}},
+        data_points += {
+                           item['voteID']['S']:
+                               {
+                                    'timestamp': item['timestamp']['S'],
+                                    'choice': item['choice']['S']
+                                }
+                       },
+
+    print('Found %i total data points for this time period' % len(data_points))
 
     # sample output:
     # [
@@ -65,12 +71,5 @@ def scan_table():
                                                # 'choice': 'BlueBottle'}}
     # ]
 
-    return total, data_points
+    return data_points
 
-
-def plot_some_stuff(total, data):
-
-    # first make line chart over time
-    plt.plot([1, 2, 3, 4])
-    plt.ylabel('some numbers')
-    plt.show()
